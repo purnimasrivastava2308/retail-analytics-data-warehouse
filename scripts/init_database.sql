@@ -1,4 +1,3 @@
-```sql
 /*
 ================================================================================
                     RETAIL ANALYTICS DATA PLATFORM
@@ -7,10 +6,9 @@
 
 Purpose
 -------
-This script creates the three databases used by the Retail Analytics Data
-Platform.
+Initializes the databases required for the Retail Analytics Data Platform.
 
-The project follows a layered data warehouse architecture:
+The project follows a layered architecture:
 
     Source Data
         ↓
@@ -23,101 +21,60 @@ The project follows a layered data warehouse architecture:
     Tableau / Machine Learning
 
 
-Database Architecture
----------------------
+Database Layers
+---------------
 
-1. RetailAnalyticsDW_bronze
-   ------------------------
-   Stores raw data as received from source systems.
+Bronze:
+    RetailAnalyticsDW_bronze
+    Stores raw source data with minimal transformation.
 
-   Purpose:
-   - Raw data ingestion
-   - Source data preservation
-   - Data traceability
-   - Reprocessing when required
+Silver:
+    RetailAnalyticsDW_silver
+    Stores cleaned, validated, and transformed data.
 
-
-2. RetailAnalyticsDW_silver
-   ------------------------
-   Stores cleaned, validated, and transformed data.
-
-   Purpose:
-   - Data cleaning
-   - Data standardization
-   - Duplicate handling
-   - Data validation
-   - Business-rule transformations
+Gold:
+    RetailAnalyticsDW_gold
+    Stores business-ready analytical data used for Tableau reporting
+    and future machine learning workflows.
 
 
-3. RetailAnalyticsDW_gold
-   -----------------------
-   Stores business-ready analytical data.
-
-   Purpose:
-   - Dimensional modeling
-   - Analytical datasets
-   - KPI development
-   - Tableau reporting
-   - Machine learning datasets
-
-
-Data Flow
+Important
 ---------
+This script intentionally drops and recreates the databases.
 
-    Raw Source Data
-           │
-           ▼
-    ┌─────────────────────────┐
-    │ RetailAnalyticsDW_bronze│
-    │       Raw Data          │
-    └────────────┬────────────┘
-                 │
-                 ▼
-    ┌─────────────────────────┐
-    │ RetailAnalyticsDW_silver│
-    │    Cleaned Data         │
-    └────────────┬────────────┘
-                 │
-                 ▼
-    ┌─────────────────────────┐
-    │  RetailAnalyticsDW_gold │
-    │   Analytics Data        │
-    └────────────┬────────────┘
-                 │
-            ┌────┴────┐
-            ▼         ▼
-        Tableau    Python / ML
+Running this script will permanently delete all existing tables and data
+inside these three databases.
 
-
-Notes
------
-- This script only creates the databases.
-- Table creation will be handled in separate SQL scripts.
-- The database names use lowercase layer names consistently.
-- The script can be executed from MySQL Workbench.
-- Database/table design will be defined after analyzing the source datasets.
+Use this script during development when a clean database initialization
+is required.
 
 ================================================================================
 */
 
 
 -- =============================================================================
--- 1. CREATE BRONZE DATABASE
+-- 1. BRONZE DATABASE
 -- =============================================================================
+
+DROP DATABASE IF EXISTS RetailAnalyticsDW_bronze;
 
 CREATE DATABASE RetailAnalyticsDW_bronze;
 
 
 -- =============================================================================
--- 2. CREATE SILVER DATABASE
+-- 2. SILVER DATABASE
 -- =============================================================================
+
+DROP DATABASE IF EXISTS RetailAnalyticsDW_silver;
 
 CREATE DATABASE RetailAnalyticsDW_silver;
 
 
 -- =============================================================================
--- 3. CREATE GOLD DATABASE
+-- 3. GOLD DATABASE
 -- =============================================================================
+
+DROP DATABASE IF EXISTS RetailAnalyticsDW_gold;
 
 CREATE DATABASE RetailAnalyticsDW_gold;
 
@@ -138,26 +95,3 @@ WHERE
     )
 ORDER BY
     SCHEMA_NAME;
-
-
-/*
-
-================================================================================
-INITIALIZATION COMPLETE
-================================================================================
-
-Next steps:
-
-1. Analyze the source datasets.
-2. Design the Bronze layer tables.
-3. Load raw data into the Bronze layer.
-4. Clean and transform data into the Silver layer.
-5. Design the Gold dimensional model.
-6. Build analytics-ready datasets.
-7. Connect the Gold layer to Tableau.
-8. Develop Tableau dashboards and business KPIs.
-9. Use Gold-layer data for future Python/ML workflows.
-
-================================================================================
-*/
-```
