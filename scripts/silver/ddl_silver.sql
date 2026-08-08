@@ -200,9 +200,9 @@ Transformations applied during Silver loading may include:
 DROP TABLE IF EXISTS erp_cust_az12;
 
 CREATE TABLE erp_cust_az12 (
-    CID                 VARCHAR(30),
-    BDATE               DATE,
-    GEN                 VARCHAR(20),
+    cid                 VARCHAR(30),
+    bdate               DATE,
+    gen                 VARCHAR(20),
     dwh_create_date     DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -225,8 +225,8 @@ Transformations applied during Silver loading may include:
 DROP TABLE IF EXISTS erp_loc_a101;
 
 CREATE TABLE erp_loc_a101 (
-    CID                 VARCHAR(30),
-    CNTRY               VARCHAR(50),
+    cid                 VARCHAR(30),
+    cntry               VARCHAR(50),
     dwh_create_date     DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -249,10 +249,10 @@ Transformations applied during Silver loading may include:
 DROP TABLE IF EXISTS erp_cat_g1v2;
 
 CREATE TABLE erp_cat_g1v2 (
-    ID                  VARCHAR(20),
-    CAT                 VARCHAR(100),
-    SUBCAT              VARCHAR(100),
-    MAINTENANCE         VARCHAR(10),
+    id                  VARCHAR(20),
+    cat                 VARCHAR(100),
+    subcat              VARCHAR(100),
+    maintenance         VARCHAR(10),
     dwh_create_date     DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
