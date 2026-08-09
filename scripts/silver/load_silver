@@ -328,7 +328,7 @@ from the source values.
 TRUNCATE TABLE RetailAnalyticsDW_silver.erp_cat_g1v2;
 
 INSERT INTO RetailAnalyticsDW_silver.erp_cat_g1v2 (
-    id,
+    REPLACE(TRIM(id), "_", "-") AS id,
     cat,
     subcat,
     maintenance
