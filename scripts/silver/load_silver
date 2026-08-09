@@ -96,7 +96,7 @@ SELECT
     END AS cst_gndr,
 
     CASE
-        WHEN LENGTH(TRIM(cst_create_date)) != 10
+        WHEN LENGTH(TRIM(REPLACE(cst_create_date, CHAR(13), ''))) != 10
             OR TRIM(cst_create_date) IS NULL
         THEN NULL
         ELSE CAST(cst_create_date AS DATE)
