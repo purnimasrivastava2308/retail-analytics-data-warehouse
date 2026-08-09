@@ -324,6 +324,6 @@ CRM / ERP Sources
 
 The platform demonstrates a complete, production-oriented analytics workflow:
 
-**Raw Data → Quality Assessment → Transformation → Validation → Dimensional Modeling  → Machine Learning ****→ BI**
+**Raw Data → Quality Assessment → Transformation → Validation → Dimensional Modeling  → Machine Learning → BI**
 
 The resulting Gold layer provides a **trusted, reusable, and scalable analytical foundation** for downstream reporting, analytics, and predictive workloads.
