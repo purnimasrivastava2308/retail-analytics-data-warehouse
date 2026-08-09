@@ -115,7 +115,7 @@ FROM (
     WHERE cst_id IS NOT NULL
 ) t
 
-WHERE flag_last = 1;
+WHERE flag_last = 1 AND cst_key LIKE 'AW%';
 
 
 -- ============================================================================
