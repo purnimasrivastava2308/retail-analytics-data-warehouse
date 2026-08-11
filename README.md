@@ -2,7 +2,7 @@
 
 An end-to-end **retail analytics platform** that transforms CRM and ERP source data into a trusted analytical foundation for **business intelligence, advanced analytics, and machine learning**.
 
-The platform follows a **Medallion Architecture** with progressive data quality validation and a sales-centered **Gold star schema**.
+The platform follows a **Medallion Architecture** with progressive data quality validation, targeted performance optimization, and a sales-centered **Gold star schema**.
 
 ---
 
@@ -29,6 +29,9 @@ The platform follows a **Medallion Architecture** with progressive data quality 
                     │ Standardize   │
                     │ Integrate     │
                     │ Transform     │
+                    │               │
+                    │ Targeted      │
+                    │ Indexing      │
                     └───────┬───────┘
                             │
                          Verify
@@ -39,6 +42,9 @@ The platform follows a **Medallion Architecture** with progressive data quality 
                     │               │
                     │ Dimensional   │
                     │ Model         │
+                    │               │
+                    │ Indexed       │
+                    │ Partitioned   │
                     └───────┬───────┘
                             │
                          Verify
@@ -54,11 +60,11 @@ The platform follows a **Medallion Architecture** with progressive data quality 
 
 ### Medallion Layers
 
-| Layer      | Responsibility                                        |
-| ---------- | ----------------------------------------------------- |
-| **Bronze** | Preserve raw CRM and ERP source data                  |
-| **Silver** | Cleanse, standardize, integrate, and transform data   |
-| **Gold**   | Provide the validated business-ready analytical model |
+| Layer      | Responsibility                                                                           |
+| ---------- | ---------------------------------------------------------------------------------------- |
+| **Bronze** | Preserve raw CRM and ERP source data                                                     |
+| **Silver** | Cleanse, standardize, integrate, transform, and optimize data for downstream processing  |
+| **Gold**   | Provide the validated, business-ready analytical model optimized for BI and ML workloads |
 
 ---
 
@@ -200,6 +206,90 @@ Validation includes:
 
 ---
 
+## Performance Optimization
+
+The platform uses **targeted indexing and partitioning** to improve data processing and analytical query performance.
+
+### Silver Layer Indexing
+
+The Silver layer is table-based and uses indexes on columns frequently involved in **Silver-to-Gold joins and date filtering**.
+
+| Silver Table        | Indexed Column | Purpose                       |
+| ------------------- | -------------- | ----------------------------- |
+| `crm_cust_info`     | `customer_key` | Customer joins                |
+| `crm_prd_info`      | `product_key`  | Product joins                 |
+| `crm_prd_info`      | `category_id`  | Category joins                |
+| `crm_sales_details` | `product_key`  | Product joins                 |
+| `crm_sales_details` | `customer_id`  | Customer joins                |
+| `crm_sales_details` | `order_date`   | Date filtering / Gold loading |
+| `erp_cat_g1v2`      | `category_id`  | Category joins                |
+| `erp_cust_az12`     | `customer_id`  | Customer joins                |
+| `erp_loc_a101`      | `customer_id`  | Customer/location joins       |
+
+Indexes are intentionally limited to relevant access paths rather than indexing every column.
+
+### Gold Layer Indexing
+
+The Gold layer uses primary keys and targeted indexes for analytical workloads.
+
+```text
+dim_customers
+└── PRIMARY KEY (customer_key)
+
+dim_products
+└── PRIMARY KEY (product_key)
+
+fact_sales
+├── INDEX (customer_key)
+├── INDEX (product_key)
+├── INDEX (order_date)
+└── INDEX (order_number)
+```
+
+These indexes support:
+
+* Dimension-to-fact joins
+* Customer analysis
+* Product analysis
+* Date-based filtering
+* Order-level analysis
+
+### Fact Table Partitioning
+
+The `fact_sales` table is partitioned by **year of `order_date`** using MySQL `RANGE` partitioning.
+
+```text
+fact_sales
+│
+├── p_2010
+├── p_2011
+├── p_2012
+├── p_2013
+├── p_2014
+└── p_future
+```
+
+The partitioning expression is:
+
+```sql
+YEAR(order_date)
+```
+
+Year-based partitioning supports the project's time-oriented analytical workload, including:
+
+* Yearly revenue analysis
+* Monthly sales trends
+* Year-over-year growth
+* Category growth analysis
+* Product growth analysis
+* Country growth analysis
+
+For appropriate date-filtered queries, MySQL can use **partition pruning** to reduce the amount of data scanned.
+
+Indexes and partitioning are implemented separately from the analytical SQL to keep performance-related database changes organized and maintainable.
+
+---
+
 ## Analytics & ML
 
 The Gold model provides a reusable foundation for:
@@ -219,13 +309,16 @@ The Gold model provides a reusable foundation for:
 
 ### Analytics
 
+* Executive KPI analysis
 * Sales and revenue trends
 * Customer segmentation
-* Product and category performance
+* Customer concentration
+* Product performance
+* Category and subcategory analysis
 * Geographic analysis
 * Pricing analysis
 * Profitability analysis
-* Fulfillment analysis
+* Year-over-year growth analysis
 
 ### Machine Learning
 
@@ -240,14 +333,15 @@ The Gold model provides structured features for downstream ML workflows such as:
 
 ## Technology Stack
 
-| Area                | Technology            |
-| ------------------- | --------------------- |
-| Data Warehouse      | MySQL                 |
-| Data Transformation | SQL                   |
-| Data Quality        | SQL validation checks |
-| BI & Visualization  | Tableau               |
-| Machine Learning    | Python                |
-| Version Control     | Git / GitHub          |
+| Area                     | Technology                   |
+| ------------------------ | ---------------------------- |
+| Data Warehouse           | MySQL                        |
+| Data Transformation      | SQL                          |
+| Data Quality             | SQL validation checks        |
+| Performance Optimization | MySQL indexes & partitioning |
+| BI & Visualization       | Tableau                      |
+| Machine Learning         | Python                       |
+| Version Control          | Git / GitHub                 |
 
 ---
 
@@ -263,7 +357,16 @@ retail-analytics-intelligence-platform/
 ├── scripts/
 │   ├── bronze/
 │   ├── silver/
+│   │   ├── 01_create_tables.sql
+│   │   ├── 02_load_data.sql
+│   │   └── 03_indexes.sql
+│   │
 │   ├── gold/
+│   │   ├── 01_create_tables.sql
+│   │   ├── 02_load_data.sql
+│   │   ├── 03_indexes.sql
+│   │   └── 04_partition_fact_sales.sql
+│   │
 │   └── quality_checks/
 │
 ├── docs/
@@ -285,13 +388,13 @@ retail-analytics-intelligence-platform/
 
 ## Documentation
 
-| Document                                            | Description                                    |
-| --------------------------------------------------- | ---------------------------------------------- |
-| [`ARCHITECTURE.md`](docs/ARCHITECTURE.md)           | Overall architecture and data flow             |
-| [`DATA_MODEL.md`](docs/DATA_MODEL.md)               | Gold star schema and relationships             |
-| [`DATA_DICTIONARY.md`](docs/DATA_DICTIONARY.md)     | Column definitions, transformations, and usage |
-| [`DATA_QUALITY.md`](docs/DATA_QUALITY.md)           | Layer-wise quality checks and validation       |
-| [`NAMING_CONVENTION.md`](docs/NAMING_CONVENTION.md) | Database and SQL naming standards              |
+| Document                                            | Description                                                          |
+| --------------------------------------------------- | -------------------------------------------------------------------- |
+| [`ARCHITECTURE.md`](docs/ARCHITECTURE.md)           | Overall architecture, data flow, indexing, and partitioning strategy |
+| [`DATA_MODEL.md`](docs/DATA_MODEL.md)               | Gold star schema and relationships                                   |
+| [`DATA_DICTIONARY.md`](docs/DATA_DICTIONARY.md)     | Column definitions, transformations, and usage                       |
+| [`DATA_QUALITY.md`](docs/DATA_QUALITY.md)           | Layer-wise quality checks and validation                             |
+| [`NAMING_CONVENTION.md`](docs/NAMING_CONVENTION.md) | Database and SQL naming standards                                    |
 
 ---
 
@@ -307,9 +410,15 @@ CRM / ERP Sources
        ▼
      Silver
        │
-       │ Transformation + Verification
+       │ Transformation
+       │ + Targeted Indexing
+       │ + Verification
        ▼
       Gold
+       │
+       │ Indexing
+       │ + Year-Based Partitioning
+       │ + Verification
        │
        ├───────────────┐
        ▼               ▼
@@ -320,10 +429,14 @@ CRM / ERP Sources
        Business Insights
 ```
 
+---
+
 ## Project Objective
 
 The platform demonstrates a complete, production-oriented analytics workflow:
 
-**Raw Data → Quality Assessment → Transformation → Validation → Dimensional Modeling  → Machine Learning → BI**
+**Raw Data → Quality Assessment → Transformation → Validation → Dimensional Modeling → Performance Optimization → Machine Learning → BI**
 
 The resulting Gold layer provides a **trusted, reusable, and scalable analytical foundation** for downstream reporting, analytics, and predictive workloads.
+
+The architecture separates data transformation from downstream consumption while applying targeted database optimization to support both analytical processing and BI workloads.
