@@ -10,14 +10,18 @@ Retail Analytics Data Warehouse
 
 Purpose:
 --------
-Creates business-ready dimension and fact views from the Silver layer.
+Creates business-ready dimension and fact tables from the Silver layer.
 
-Views:
-------
-- dim_customers : Customer dimension enriched with ERP demographic and location data
-- dim_products  : Current product dimension enriched with category information
-- fact_sales    : Sales fact combining transactional data with customer and product
-                  surrogate keys
+Tables:
+-------
+- dim_customers : Customer dimension enriched with ERP demographic and
+                  location data.
+
+- dim_products  : Current product dimension enriched with category
+                  and maintenance information.
+
+- fact_sales    : Sales fact combining transactional data with customer
+                  and product surrogate keys.
 
 
 Model:
@@ -33,12 +37,23 @@ Model:
                     dim_products
 
 
+Transformations:
+----------------
+- Generates surrogate keys for customer and product dimensions.
+- Enriches customer data with ERP demographic and location information.
+- Enriches product data with ERP category information.
+- Includes only the current version of each product.
+- Resolves customer and product relationships using business keys.
+- Creates a business-ready sales fact table using Gold surrogate keys.
+
+
 Notes:
 ------
+- Gold objects are physical tables rather than views.
 - Surrogate keys are generated using ROW_NUMBER().
-- Customer and product dimensions are enriched using ERP reference data.
-- Only the current version of each product is included in dim_products.
-- fact_sales uses surrogate keys from the Gold dimensions.
+- Customer and product dimensions are built from Silver layer data.
+- fact_sales references customer_key and product_key from Gold dimensions.
+- Gold tables are intended for analytics, reporting, Tableau, and ML workloads.
 
 ================================================================================
 */
@@ -50,9 +65,9 @@ Notes:
 
 USE retailanalyticsdw_silver;
 
-DROP VIEW IF EXISTS retailanalyticsdw_gold.dim_customers;
+DROP TABLE IF EXISTS retailanalyticsdw_gold.dim_customers;
 
-CREATE VIEW retailanalyticsdw_gold.dim_customers AS
+CREATE TABLE retailanalyticsdw_gold.dim_customers AS
 SELECT
     ROW_NUMBER() OVER (ORDER BY ci.cst_id) AS customer_key,
     ci.cst_id AS customer_id,
@@ -80,9 +95,9 @@ LEFT JOIN erp_loc_a101 la
 
 USE retailanalyticsdw_silver;
 
-DROP VIEW IF EXISTS retailanalyticsdw_gold.dim_products;
+DROP TABLE IF EXISTS retailanalyticsdw_gold.dim_products;
 
-CREATE VIEW retailanalyticsdw_gold.dim_products AS
+CREATE TABLE retailanalyticsdw_gold.dim_products AS
 SELECT
     ROW_NUMBER() OVER (
         ORDER BY pn.prd_start_dt, pn.prd_key
@@ -109,9 +124,9 @@ WHERE pn.prd_end_dt IS NULL;
 
 USE retailanalyticsdw_silver;
 
-DROP VIEW IF EXISTS retailanalyticsdw_gold.fact_sales;
+DROP TABLE IF EXISTS retailanalyticsdw_gold.fact_sales;
 
-CREATE VIEW retailanalyticsdw_gold.fact_sales AS
+CREATE TABLE retailanalyticsdw_gold.fact_sales AS
 SELECT
     sd.sls_ord_num AS order_number,
     pr.product_key,
