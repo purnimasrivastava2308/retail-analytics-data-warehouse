@@ -98,6 +98,7 @@ ERP Sources ──┘
 * Preserve source data.
 * Maintain source-level structure.
 * Provide a reproducible raw-data layer.
+* Support downstream transformation and validation.
 
 ---
 
@@ -128,10 +129,41 @@ Bronze
 * Identifier validation
 * CRM–ERP integration
 * Business rule application
+* Standardization of business keys used by downstream layers
+
+The Silver layer is **table-based**, allowing targeted indexing to improve the performance of Silver-to-Gold transformations.
 
 ---
 
-### Gold Layer — Business
+## 4. Silver Layer Performance Optimization
+
+Targeted indexes are created on Silver tables for columns that are frequently used in **joins and date-based filtering** during Gold-layer processing.
+
+Indexes are intentionally limited to relevant access paths to avoid unnecessary indexing and additional write/storage overhead.
+
+| Silver Table        | Indexed Column | Purpose                       |
+| ------------------- | -------------- | ----------------------------- |
+| `crm_cust_info`     | `customer_key` | Customer joins                |
+| `crm_prd_info`      | `product_key`  | Product joins                 |
+| `crm_prd_info`      | `category_id`  | Category joins                |
+| `crm_sales_details` | `product_key`  | Product joins                 |
+| `crm_sales_details` | `customer_id`  | Customer joins                |
+| `crm_sales_details` | `order_date`   | Date filtering / Gold loading |
+| `erp_cat_g1v2`      | `category_id`  | Category joins                |
+| `erp_cust_az12`     | `customer_id`  | Customer joins                |
+| `erp_loc_a101`      | `customer_id`  | Customer/location joins       |
+
+The corresponding implementation is maintained in:
+
+```text
+scripts/
+└── silver/
+    └── 03_indexes.sql
+```
+
+---
+
+## 5. Gold Layer — Business
 
 The Gold layer contains the final analytical model.
 
@@ -147,9 +179,16 @@ Gold
 
 The Gold layer follows a **sales-centered star schema**.
 
+The Gold layer is designed as the primary consumption layer for:
+
+* Business Intelligence
+* Tableau dashboards
+* Analytical SQL queries
+* Machine Learning feature preparation
+
 ---
 
-## 4. Gold Layer Data Model
+## 6. Gold Layer Data Model
 
 ```text
                     ┌─────────────────────┐
@@ -218,7 +257,104 @@ Both dimensions have generated surrogate keys that are referenced by `fact_sales
 
 ---
 
-## 5. Analytics and Machine Learning
+## 7. Gold Layer Performance Optimization
+
+The Gold layer uses **primary keys and targeted indexes** to support analytical queries, dimensional joins, and BI workloads.
+
+### Dimension Table Keys
+
+```text
+dim_customers
+└── PRIMARY KEY (customer_key)
+
+dim_products
+└── PRIMARY KEY (product_key)
+```
+
+### Fact Table Indexes
+
+```text
+fact_sales
+├── INDEX (customer_key)
+├── INDEX (product_key)
+├── INDEX (order_date)
+└── INDEX (order_number)
+```
+
+These indexes support common analytical access patterns including:
+
+* Customer-based analysis
+* Product-based analysis
+* Date-based filtering
+* Order-level analysis
+* Joins between the fact table and dimensions
+
+The corresponding implementation is maintained in:
+
+```text
+scripts/
+└── gold/
+    └── 03_indexes.sql
+```
+
+Indexes are kept targeted to avoid unnecessary or duplicate indexes.
+
+---
+
+## 8. Fact Table Partitioning
+
+The `fact_sales` table is partitioned by **order year** using MySQL `RANGE` partitioning.
+
+```text
+fact_sales
+│
+├── p_2010
+├── p_2011
+├── p_2012
+├── p_2013
+├── p_2014
+└── p_future
+```
+
+The partitioning strategy is based on:
+
+```sql
+YEAR(order_date)
+```
+
+Current partitions are defined as:
+
+| Partition  | Data         |
+| ---------- | ------------ |
+| `p_2010`   | 2010         |
+| `p_2011`   | 2011         |
+| `p_2012`   | 2012         |
+| `p_2013`   | 2013         |
+| `p_2014`   | 2014         |
+| `p_future` | Future years |
+
+Year-based partitioning is appropriate for this workload because a significant portion of the analytical workload is time-oriented, including:
+
+* Yearly revenue analysis
+* Monthly sales trends
+* Year-over-year growth
+* Category growth analysis
+* Product growth analysis
+* Country growth analysis
+
+For queries that filter directly on the partitioning expression, MySQL can use **partition pruning**, reducing the amount of data that needs to be scanned.
+
+The partitioning implementation is maintained in:
+
+```text
+scripts/
+└── gold/
+    └── 04_partition_fact_sales.sql
+```
+
+---
+
+## 9. Analytics and Machine Learning
 
 The Gold layer serves as the trusted source for both **Business Intelligence** and **Machine Learning** workloads.
 
@@ -281,7 +417,7 @@ The ML layer is separated from the warehouse transformation layer so that analyt
 
 ---
 
-## 6. End-to-End Data Flow
+## 10. End-to-End Data Flow
 
 ```text
 SOURCE
@@ -308,11 +444,14 @@ SOURCE
       │ CLEANED │
       └────┬────┘
            │
+           │ Indexed join paths
            ▼
       ┌─────────┐
       │  GOLD   │
       │ BUSINESS│
       └────┬────┘
+           │
+           │ Indexed + Partitioned
            │
       ┌────┴──────────┐
       ▼               ▼
@@ -329,4 +468,8 @@ SOURCE
       └─────────────────────────────
 ```
 
-The architecture provides a clear separation between **raw ingestion, data transformation, business-ready analytics, and machine learning**, while the Gold layer serves as the trusted source for downstream BI and predictive analytics.
+The architecture provides a clear separation between **raw ingestion, data transformation, business-ready analytics, and machine learning**.
+
+Targeted indexing in the Silver layer improves transformation performance, while Gold-layer indexing and `fact_sales` partitioning optimize downstream analytical workloads.
+
+The Gold layer serves as the trusted source for Tableau dashboards, analytical SQL queries, and machine learning workflows.
